@@ -8,6 +8,7 @@ use std::iter::repeat;
 
 #[derive(Serialize, Clone)]
 enum Vars<'a> {
+    Zero,
     One(usize),
     Two(String),
     Three(&'a HashMap<i32, String>),
@@ -32,6 +33,7 @@ pub extern "system" fn Java_Test_test(env: JNIEnv, _: JClass, n: jint) -> jobjec
         another_field: None,
         a_string: "test".into(),
         enumerate: vec![
+            Vars::Zero,
             Vars::One(1),
             Vars::Two("three".into()),
             Vars::Three(&map),
