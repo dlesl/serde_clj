@@ -21,6 +21,8 @@ struct Test {
     another_field: Option<String>,
     a_string: String,
     enumerate: Vec<Vars>,
+    #[serde(with = "serde_bytes")]
+    bytes: Vec<u8>
 }
 
 #[no_mangle]
@@ -43,6 +45,7 @@ pub extern "system" fn Java_Test_ser(env: JNIEnv, _: JClass, n: jint) -> jobject
                 s: "ok?".into(),
             },
         ],
+        bytes: vec![0, 1, 2]
     };
     let vec = repeat(test).take(n as usize).collect::<Vec<_>>();
     let output = to_object(&enc, &vec).expect("serialisation failed!");

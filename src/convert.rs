@@ -317,6 +317,9 @@ pub struct Decoder<'a> {
     pub class_iter: JClass<'a>,
     pub hasnext_iter: JMethodID<'a>,
     pub next_iter: JMethodID<'a>,
+
+    /// a byte array
+    pub class_bytes: JClass<'a>,
 }
 
 macro_rules! decode {
@@ -404,6 +407,8 @@ impl<'a> Decoder<'a> {
             next_iter: com
                 .env
                 .get_method_id(class_iter, "next", "()Ljava/lang/Object;")?,
+
+            class_bytes: com.env.find_class("[B")?,
             class_iter,
             class_rt,
             // class_iseq,
@@ -434,6 +439,14 @@ impl<'a> Decoder<'a> {
     pub fn decode_string(&self, obj: JObject) -> Result<Option<String>> {
         if self.com.env.is_instance_of(obj, self.com.class_string)? {
             Ok(Some(self.com.env.get_string(obj.into())?.into()))
+        } else {
+            Ok(None)
+        }
+    }
+
+    pub fn decode_bytes(&self, obj: JObject) -> Result<Option<Vec<u8>>> {
+        if self.com.env.is_instance_of(obj, self.class_bytes)? {
+            Ok(Some(self.com.env.convert_byte_array(obj.into_inner())?))
         } else {
             Ok(None)
         }

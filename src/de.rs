@@ -211,18 +211,22 @@ impl<'de> de::Deserializer<'de> for Deserializer<'de> {
         }
     }
 
-    fn deserialize_bytes<V>(self, _visitor: V) -> Result<V::Value>
+    fn deserialize_byte_buf<V>(self, visitor: V) -> Result<V::Value>
     where
         V: Visitor<'de>,
     {
-        unimplemented!()
+        if let Some(bs) = self.dec.decode_bytes(self.obj.as_obj())? {
+            visitor.visit_bytes(&bs)
+        } else {
+            Err(Error::ExpectedBytes)
+        }
     }
 
-    fn deserialize_byte_buf<V>(self, _visitor: V) -> Result<V::Value>
+    fn deserialize_bytes<V>(self, visitor: V) -> Result<V::Value>
     where
         V: Visitor<'de>,
     {
-        unimplemented!()
+        Deserializer::deserialize_byte_buf(self, visitor)
     }
 
     fn deserialize_option<V>(self, visitor: V) -> Result<V::Value>
