@@ -20,6 +20,7 @@ struct Test {
     value: Vec<i64>,
     another_field: Option<String>,
     a_string: String,
+    tuple: (i32, String),
     enumerate: Vec<Vars>,
     #[serde(with = "serde_bytes")]
     bytes: Vec<u8>
@@ -34,6 +35,7 @@ pub extern "system" fn Java_Test_ser(env: JNIEnv, _: JClass, n: jint) -> jobject
         value: vec![1, 2, 3],
         another_field: None,
         a_string: "test".into(),
+        tuple: (4, "hey".into()),
         enumerate: vec![
             Vars::Zero,
             Vars::One(1),
