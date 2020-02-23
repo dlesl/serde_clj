@@ -39,19 +39,6 @@ pub fn variant_map<'a>(
     Ok(res.to_hashmap()?.into())
 }
 
-// How this works: everything returns JValue, which often contains a
-// JObject which is a local ref which needs to be deleted to avoid
-// leaks. All collections consist of an 'ArrayList' while being
-// constructed, and ArrayList is a wrapper around java.util.ArrayList.
-// java.util.ArrayList can only store Objects (not primitives), so
-// Encoder::to_boxed is used to box them. ArrayList::add _deletes_ the
-// local ref after adding it to the java.util.ArrayList. Finally, the
-// ArrayList is converted to a clojure vec or map. Since everything
-// either ends up in a collection or is the final result, nothing will
-// be leaked (local refs). It is not necessary to clean up the
-// class/method refs in `Encoder` because they will be deleted when we
-// return.
-
 impl<'a> serde::Serializer for Serializer<'a> {
     type Ok = JValue<'a>;
     type Error = Error;
@@ -129,11 +116,11 @@ impl<'a> serde::Serializer for Serializer<'a> {
 
     #[inline]
     fn serialize_str(self, value: &str) -> Result<JValue<'a>> {
-        Ok(JValue::Object(self.enc.env.new_string(value)?.into()).into())
+        Ok(JValue::Object(self.enc.com.env.new_string(value)?.into()).into())
     }
 
     fn serialize_bytes(self, value: &[u8]) -> Result<JValue<'a>> {
-        Ok(JObject::from(self.enc.env.byte_array_from_slice(value)?).into())
+        Ok(JObject::from(self.enc.com.env.byte_array_from_slice(value)?).into())
     }
 
     #[inline]

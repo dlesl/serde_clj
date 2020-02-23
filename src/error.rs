@@ -9,21 +9,21 @@ pub type Result<T> = std::result::Result<T, Error>;
 pub enum Error {
     Message(String),
     JNI(jni::errors::Error),
-    // Eof,
-    // Syntax,
-    // ExpectedBoolean,
-    // ExpectedInteger,
-    // ExpectedString,
-    // ExpectedNull,
-    // ExpectedArray,
-    // ExpectedArrayComma,
-    // ExpectedArrayEnd,
-    // ExpectedMap,
-    // ExpectedMapColon,
-    // ExpectedMapComma,
-    // ExpectedMapEnd,
-    // ExpectedEnum,
-    // TrailingCharacters
+    UnrecognizedType,
+    ExpectedBoolean,
+    ExpectedInteger,
+    ExpectedFloat,
+    ExpectedChar,
+    ExpectedString,
+    ExpectedNull,
+    ExpectedArray,
+    ExpectedArrayComma,
+    ExpectedArrayEnd,
+    ExpectedMap,
+    ExpectedMapColon,
+    ExpectedMapComma,
+    ExpectedMapEnd,
+    ExpectedEnum,
 }
 
 impl ser::Error for Error {
@@ -49,6 +49,21 @@ impl std::error::Error for Error {
         match *self {
             Error::Message(ref msg) => msg,
             Error::JNI(ref error) => error.description(),
+            Error::UnrecognizedType => "UnrecognizedType",
+            Error::ExpectedBoolean => "ExpectedBoolean",
+            Error::ExpectedInteger => "ExpectedInteger",
+            Error::ExpectedFloat => "ExpectedFloat",
+            Error::ExpectedChar => "ExpectedChar",
+            Error::ExpectedString => "ExpectedString",
+            Error::ExpectedNull => "ExpectedNull",
+            Error::ExpectedArray => "ExpectedArray",
+            Error::ExpectedArrayComma => "ExpectedArrayComma",
+            Error::ExpectedArrayEnd => "ExpectedArrayEnd",
+            Error::ExpectedMap => "ExpectedMap",
+            Error::ExpectedMapColon => "ExpectedMapColon",
+            Error::ExpectedMapComma => "ExpectedMapComma",
+            Error::ExpectedMapEnd => "ExpectedMapEnd",
+            Error::ExpectedEnum => "ExpectedEnum",
         }
     }
 }

@@ -1,24 +1,51 @@
 use crate::Result;
 
 use jni::{
-    objects::{JClass, JMethodID, JObject, JStaticMethodID, JValue},
+    objects::{AutoLocal, JClass, JMethodID, JObject, JStaticMethodID, JValue},
     signature::{JavaType, Primitive},
     JNIEnv,
 };
 
-pub struct Encoder<'a> {
+pub struct Common<'a> {
     pub env: JNIEnv<'a>,
-    class_boolean: JClass<'a>,
-    class_byte: JClass<'a>,
-    class_integer: JClass<'a>,
-    class_short: JClass<'a>,
-    class_long: JClass<'a>,
-    class_float: JClass<'a>,
-    class_double: JClass<'a>,
-    class_character: JClass<'a>,
-    class_persistentvector: JClass<'a>,
-    class_persistenthashmap: JClass<'a>,
+    pub class_boolean: JClass<'a>,
+    pub class_byte: JClass<'a>,
+    pub class_integer: JClass<'a>,
+    pub class_short: JClass<'a>,
+    pub class_long: JClass<'a>,
+    pub class_float: JClass<'a>,
+    pub class_double: JClass<'a>,
+    pub class_character: JClass<'a>,
+    pub class_string: JClass<'a>,
+    pub class_persistentvector: JClass<'a>,
+    pub class_persistenthashmap: JClass<'a>,
+    pub class_imapiterable: JClass<'a>,
+    pub class_keyword: JClass<'a>,
+}
 
+impl<'a> Common<'a> {
+    pub fn new(env: JNIEnv<'a>) -> Result<Self> {
+        Ok(Self {
+            class_boolean: env.find_class("java/lang/Boolean")?,
+            class_byte: env.find_class("java/lang/Byte")?,
+            class_integer: env.find_class("java/lang/Integer")?,
+            class_long: env.find_class("java/lang/Long")?,
+            class_short: env.find_class("java/lang/Short")?,
+            class_float: env.find_class("java/lang/Float")?,
+            class_double: env.find_class("java/lang/Double")?,
+            class_character: env.find_class("java/lang/Character")?,
+            class_string: env.find_class("java/lang/String")?,
+            class_keyword: env.find_class("clojure/lang/Keyword")?,
+            class_persistentvector: env.find_class("clojure/lang/PersistentVector")?,
+            class_persistenthashmap: env.find_class("clojure/lang/PersistentHashMap")?,
+            class_imapiterable: env.find_class("clojure/lang/IMapIterable")?,
+            env,
+        })
+    }
+}
+
+pub struct Encoder<'a> {
+    pub com: Common<'a>,
     valueof_boolean: JStaticMethodID<'a>,
     valueof_byte: JStaticMethodID<'a>,
     valueof_integer: JStaticMethodID<'a>,
@@ -33,120 +60,103 @@ pub struct Encoder<'a> {
     add_arraylist: JMethodID<'a>,
     toarray_arraylist: JMethodID<'a>,
 
-    class_keyword: JClass<'a>,
     intern_keyword: JStaticMethodID<'a>,
-    // cached_keywords: RefCell<HashMap<String, JObject<'a>>>,
+
     create_persistentvector: JStaticMethodID<'a>,
     create_persistenthashmap: JStaticMethodID<'a>,
 }
 
 impl<'a> Encoder<'a> {
     pub fn new(env: JNIEnv<'a>) -> Result<Self> {
-        let class_boolean = env.find_class("java/lang/Boolean")?;
-        let class_byte = env.find_class("java/lang/Byte")?;
-        let class_integer = env.find_class("java/lang/Integer")?;
-        let class_long = env.find_class("java/lang/Long")?;
-        let class_short = env.find_class("java/lang/Short")?;
-        let class_float = env.find_class("java/lang/Float")?;
-        let class_double = env.find_class("java/lang/Double")?;
-        let class_character = env.find_class("java/lang/Character")?;
+        let com = Common::new(env)?;
 
-        let class_arraylist = env.find_class("java/util/ArrayList")?;
-
-        let class_keyword = env.find_class("clojure/lang/Keyword")?;
-
-        let class_persistentvector = env.find_class("clojure/lang/PersistentVector")?;
-        let class_persistenthashmap = env.find_class("clojure/lang/PersistentHashMap")?;
-
+        let class_arraylist = com.env.find_class("java/util/ArrayList")?;
         Ok(Self {
-            valueof_boolean: env.get_static_method_id(
-                class_boolean,
+            valueof_boolean: com.env.get_static_method_id(
+                com.class_boolean,
                 "valueOf",
                 "(Z)Ljava/lang/Boolean;",
             )?,
-            valueof_byte: env.get_static_method_id(class_byte, "valueOf", "(B)Ljava/lang/Byte;")?,
-            valueof_integer: env.get_static_method_id(
-                class_integer,
+            valueof_byte: com.env.get_static_method_id(
+                com.class_byte,
+                "valueOf",
+                "(B)Ljava/lang/Byte;",
+            )?,
+            valueof_integer: com.env.get_static_method_id(
+                com.class_integer,
                 "valueOf",
                 "(I)Ljava/lang/Integer;",
             )?,
-            valueof_long: env.get_static_method_id(class_long, "valueOf", "(J)Ljava/lang/Long;")?,
-            valueof_short: env.get_static_method_id(
-                class_short,
+            valueof_long: com.env.get_static_method_id(
+                com.class_long,
+                "valueOf",
+                "(J)Ljava/lang/Long;",
+            )?,
+            valueof_short: com.env.get_static_method_id(
+                com.class_short,
                 "valueOf",
                 "(S)Ljava/lang/Short;",
             )?,
-            valueof_float: env.get_static_method_id(
-                class_float,
+            valueof_float: com.env.get_static_method_id(
+                com.class_float,
                 "valueOf",
                 "(F)Ljava/lang/Float;",
             )?,
-            valueof_double: env.get_static_method_id(
-                class_double,
+            valueof_double: com.env.get_static_method_id(
+                com.class_double,
                 "valueOf",
                 "(D)Ljava/lang/Double;",
             )?,
-            valueof_character: env.get_static_method_id(
-                class_character,
+            valueof_character: com.env.get_static_method_id(
+                com.class_character,
                 "valueOf",
                 "(C)Ljava/lang/Character;",
             )?,
 
-            new_arraylist: env.get_method_id(class_arraylist, "<init>", "()V")?,
-            add_arraylist: env.get_method_id(class_arraylist, "add", "(Ljava/lang/Object;)Z")?,
-            toarray_arraylist: env.get_method_id(
+            new_arraylist: com.env.get_method_id(class_arraylist, "<init>", "()V")?,
+            add_arraylist: com.env.get_method_id(
+                class_arraylist,
+                "add",
+                "(Ljava/lang/Object;)Z",
+            )?,
+            toarray_arraylist: com.env.get_method_id(
                 class_arraylist,
                 "toArray",
                 "()[Ljava/lang/Object;",
             )?,
-
-            intern_keyword: env.get_static_method_id(
-                class_keyword,
+            class_arraylist,
+            intern_keyword: com.env.get_static_method_id(
+                com.class_keyword,
                 "intern",
                 "(Ljava/lang/String;)Lclojure/lang/Keyword;",
             )?,
 
-            create_persistentvector: env.get_static_method_id(
-                class_persistentvector,
+            create_persistentvector: com.env.get_static_method_id(
+                com.class_persistentvector,
                 "create",
                 "(Ljava/lang/Iterable;)Lclojure/lang/PersistentVector;",
             )?,
 
-            create_persistenthashmap: env.get_static_method_id(
-                class_persistenthashmap,
+            create_persistenthashmap: com.env.get_static_method_id(
+                com.class_persistenthashmap,
                 "create",
                 "([Ljava/lang/Object;)Lclojure/lang/PersistentHashMap;",
             )?,
 
-            class_boolean,
-            class_byte,
-            class_integer,
-            class_long,
-            class_short,
-            class_float,
-            class_double,
-            class_character,
-
-            class_arraylist,
-            class_keyword,
-            class_persistentvector,
-            class_persistenthashmap,
-
-            // cached_keywords: Default::default(),
-            env,
+            com,
         })
     }
 
-    // Caching keywords here reduces JNI calls but also means we end
-    // up holding too many local refs, so we would need some sort of
-    // LRU cache. Maybe not worth it, need to benchmark.
-
-    pub fn get_keyword(&self, name: &str) -> Result<JObject<'a>> {
-        let s = self.env.auto_local(self.env.new_string(name)?.into());
+    pub fn get_keyword(&'a self, name: &str) -> Result<JObject<'a>> {
+        let s = self
+            .com
+            .env
+            .auto_local(self.com.env.new_string(name)?.into());
         let k = self
+            .com
             .env
             .call_static_method_unchecked(
-                self.class_keyword,
+                self.com.class_keyword,
                 self.intern_keyword,
                 JavaType::Object(String::new()),
                 &[s.as_obj().into()],
@@ -156,52 +166,53 @@ impl<'a> Encoder<'a> {
     }
 
     pub fn to_boxed(&self, val: JValue<'a>) -> Result<JObject<'a>> {
+        let com = &self.com;
         let res = match val {
             JValue::Object(_) => val,
-            JValue::Bool(_) => self.env.call_static_method_unchecked(
-                self.class_boolean,
+            JValue::Bool(_) => com.env.call_static_method_unchecked(
+                com.class_boolean,
                 self.valueof_boolean,
                 JavaType::Object(String::new()),
                 &[val],
             )?,
-            JValue::Byte(_) => self.env.call_static_method_unchecked(
-                self.class_byte,
+            JValue::Byte(_) => com.env.call_static_method_unchecked(
+                com.class_byte,
                 self.valueof_byte,
                 JavaType::Object(String::new()),
                 &[val],
             )?,
-            JValue::Int(_) => self.env.call_static_method_unchecked(
-                self.class_integer,
+            JValue::Int(_) => com.env.call_static_method_unchecked(
+                com.class_integer,
                 self.valueof_integer,
                 JavaType::Object(String::new()),
                 &[val],
             )?,
-            JValue::Short(_) => self.env.call_static_method_unchecked(
-                self.class_short,
+            JValue::Short(_) => com.env.call_static_method_unchecked(
+                com.class_short,
                 self.valueof_short,
                 JavaType::Object(String::new()),
                 &[val],
             )?,
-            JValue::Long(_) => self.env.call_static_method_unchecked(
-                self.class_long,
+            JValue::Long(_) => com.env.call_static_method_unchecked(
+                com.class_long,
                 self.valueof_long,
                 JavaType::Object(String::new()),
                 &[val],
             )?,
-            JValue::Float(_) => self.env.call_static_method_unchecked(
-                self.class_float,
+            JValue::Float(_) => com.env.call_static_method_unchecked(
+                com.class_float,
                 self.valueof_float,
                 JavaType::Object(String::new()),
                 &[val],
             )?,
-            JValue::Double(_) => self.env.call_static_method_unchecked(
-                self.class_double,
+            JValue::Double(_) => com.env.call_static_method_unchecked(
+                com.class_double,
                 self.valueof_double,
                 JavaType::Object(String::new()),
                 &[val],
             )?,
-            JValue::Char(_) => self.env.call_static_method_unchecked(
-                self.class_character,
+            JValue::Char(_) => com.env.call_static_method_unchecked(
+                com.class_character,
                 self.valueof_character,
                 JavaType::Object(String::new()),
                 &[val],
@@ -212,30 +223,28 @@ impl<'a> Encoder<'a> {
     }
 }
 
-/// This is a 'local ref safe' wrapper around ArrayList. It deletes
-/// the reference to itself when converted to a PersistentVector or
-/// PersistentHashMap, and consumes/deletes references to objects that
-/// are added.
 pub struct ArrayList<'a> {
     enc: &'a Encoder<'a>,
-    obj: JObject<'a>,
+    obj: AutoLocal<'a, 'a>,
 }
 
 impl<'a> ArrayList<'a> {
     pub fn new(enc: &'a Encoder<'a>) -> Result<Self> {
         Ok(Self {
-            obj: enc
-                .env
-                .new_object_unchecked(enc.class_arraylist, enc.new_arraylist, &[])?,
+            obj: enc.com.env.auto_local(enc.com.env.new_object_unchecked(
+                enc.class_arraylist,
+                enc.new_arraylist,
+                &[],
+            )?),
             enc,
         })
     }
 
     /// This method will invalidate the local ref `val`!
     pub fn add(&self, val: JObject<'a>) -> Result<()> {
-        let val = self.enc.env.auto_local(val);
-        self.enc.env.call_method_unchecked(
-            self.obj,
+        let val = self.enc.com.env.auto_local(val);
+        self.enc.com.env.call_method_unchecked(
+            self.obj.as_obj(),
             self.enc.add_arraylist,
             JavaType::Primitive(Primitive::Boolean),
             &[val.as_obj().into()],
@@ -244,26 +253,26 @@ impl<'a> ArrayList<'a> {
     }
 
     pub fn to_vector(self) -> Result<JObject<'a>> {
-        let obj = self.enc.env.auto_local(self.obj);
         Ok(self
             .enc
+            .com
             .env
             .call_static_method_unchecked(
-                self.enc.class_persistentvector,
+                self.enc.com.class_persistentvector,
                 self.enc.create_persistentvector,
                 JavaType::Object(String::new()),
-                &[obj.as_obj().into()],
+                &[self.obj.as_obj().into()],
             )?
             .l()?)
     }
 
     pub fn to_hashmap(self) -> Result<JObject<'a>> {
-        let obj = self.enc.env.auto_local(self.obj);
-        let arr = self.enc.env.auto_local(
+        let arr = self.enc.com.env.auto_local(
             self.enc
+                .com
                 .env
                 .call_method_unchecked(
-                    obj.as_obj(),
+                    self.obj.as_obj(),
                     self.enc.toarray_arraylist,
                     JavaType::Array(Box::new(JavaType::Object(String::new()))), // why is this necessary?
                     &[],
@@ -272,13 +281,217 @@ impl<'a> ArrayList<'a> {
         );
         Ok(self
             .enc
+            .com
             .env
             .call_static_method_unchecked(
-                self.enc.class_persistenthashmap,
+                self.enc.com.class_persistenthashmap,
                 self.enc.create_persistenthashmap,
                 JavaType::Object(String::new()),
                 &[arr.as_obj().into()],
             )?
             .l()?)
+    }
+}
+
+pub struct Decoder<'a> {
+    pub com: Common<'a>,
+    pub value_boolean: JMethodID<'a>,
+    pub value_byte: JMethodID<'a>,
+    pub value_integer: JMethodID<'a>,
+    pub value_short: JMethodID<'a>,
+    pub value_long: JMethodID<'a>,
+    pub value_float: JMethodID<'a>,
+    pub value_double: JMethodID<'a>,
+    pub value_character: JMethodID<'a>,
+
+    pub class_rt: JClass<'a>,
+    pub first_seq: JStaticMethodID<'a>,
+    pub next_seq: JStaticMethodID<'a>,
+
+    pub iterator_persistentvector: JMethodID<'a>,
+    pub keyiterator_imapiterable: JMethodID<'a>,
+    pub valiterator_imapiterable: JMethodID<'a>,
+
+    pub getname_keyword: JMethodID<'a>,
+
+    pub class_iter: JClass<'a>,
+    pub hasnext_iter: JMethodID<'a>,
+    pub next_iter: JMethodID<'a>,
+}
+
+macro_rules! decode {
+    ($func:ident, $out:ident, $class:ident, $value_method:ident, $prim:ident, $code:ident) => {
+        pub fn $func(&self, obj: JObject) -> Result<Option<$out>> {
+            if self
+                .com
+                .env
+                .is_instance_of(obj, self.com.$class)?
+            {
+                    Ok(Some(self
+                        .decode_prim(obj, self.$value_method, Primitive::$prim)?
+                        .$code()?))
+            } else {
+                Ok(None)
+            }
+        }
+    }
+}
+
+impl<'a> Decoder<'a> {
+    pub fn new(env: JNIEnv<'a>) -> Result<Self> {
+        let com = Common::new(env)?;
+        let class_rt = com.env.find_class("clojure/lang/RT")?;
+        // let class_iseq = com.env.find_class("clojure/lang/ISeq")?;
+        let class_iter = com.env.find_class("java/util/Iterator")?;
+
+        Ok(Decoder {
+            value_boolean: com
+                .env
+                .get_method_id(com.class_boolean, "booleanValue", "()Z")?,
+            value_byte: com.env.get_method_id(com.class_byte, "byteValue", "()B")?,
+            value_character: com
+                .env
+                .get_method_id(com.class_character, "charValue", "()C")?,
+            value_float: com
+                .env
+                .get_method_id(com.class_float, "floatValue", "()F")?,
+            value_double: com
+                .env
+                .get_method_id(com.class_double, "doubleValue", "()D")?,
+            value_short: com
+                .env
+                .get_method_id(com.class_short, "shortValue", "()S")?,
+            value_integer: com
+                .env
+                .get_method_id(com.class_integer, "intValue", "()I")?,
+            value_long: com.env.get_method_id(com.class_long, "longValue", "()J")?,
+            // seq_rt: com.env.get_static_method_id(class_rt, "seq", "(Ljava/lang/Object;)Lclojure/lang/ISeq;")?,
+            first_seq: com.env.get_static_method_id(
+                class_rt,
+                "first",
+                "(Ljava/lang/Object;)Ljava/lang/Object;",
+            )?,
+            next_seq: com.env.get_static_method_id(
+                class_rt,
+                "next",
+                "(Ljava/lang/Object;)Lclojure/lang/ISeq;",
+            )?,
+            iterator_persistentvector: com.env.get_method_id(
+                com.class_persistentvector,
+                "iterator",
+                "()Ljava/util/Iterator;",
+            )?,
+
+            keyiterator_imapiterable: com.env.get_method_id(
+                com.class_imapiterable,
+                "keyIterator",
+                "()Ljava/util/Iterator;",
+            )?,
+
+            valiterator_imapiterable: com.env.get_method_id(
+                com.class_imapiterable,
+                "valIterator",
+                "()Ljava/util/Iterator;",
+            )?,
+
+            getname_keyword: com.env.get_method_id(
+                com.class_keyword,
+                "getName",
+                "()Ljava/lang/String;",
+            )?,
+
+            hasnext_iter: com.env.get_method_id(class_iter, "hasNext", "()Z")?,
+            next_iter: com
+                .env
+                .get_method_id(class_iter, "next", "()Ljava/lang/Object;")?,
+            class_iter,
+            class_rt,
+            // class_iseq,
+            com,
+        })
+    }
+
+    fn decode_prim(
+        &self,
+        obj: JObject<'a>,
+        method: JMethodID<'a>,
+        ret: Primitive,
+    ) -> Result<JValue<'a>> {
+        Ok(self
+            .com
+            .env
+            .call_method_unchecked(obj, method, JavaType::Primitive(ret), &[])?)
+    }
+
+    decode!(decode_f32, f32, class_float, value_float, Float, f);
+    decode!(decode_f64, f64, class_double, value_double, Double, d);
+    decode!(decode_i64, i64, class_long, value_long, Long, j);
+    decode!(decode_i32, i32, class_integer, value_integer, Int, i);
+    decode!(decode_i16, i16, class_short, value_short, Short, s);
+    decode!(decode_bool, bool, class_boolean, value_boolean, Boolean, z);
+    decode!(decode_i8, i8, class_byte, value_byte, Byte, b);
+
+    pub fn decode_string(&self, obj: JObject) -> Result<Option<String>> {
+        if self.com.env.is_instance_of(obj, self.com.class_string)? {
+            Ok(Some(self.com.env.get_string(obj.into())?.into()))
+        } else {
+            Ok(None)
+        }
+    }
+
+    pub fn decode_keyword(&self, obj: JObject) -> Result<Option<String>> {
+        if self.com.env.is_instance_of(obj, self.com.class_keyword)? {
+            let name = self.com.env.auto_local(
+                self.com
+                    .env
+                    .call_method_unchecked(
+                        obj,
+                        self.getname_keyword,
+                        JavaType::Object(String::new()),
+                        &[],
+                    )?
+                    .l()?,
+            );
+            let res = self.com.env.get_string(name.as_obj().into())?.into();
+            Ok(Some(res))
+        } else {
+            Ok(None)
+        }
+    }
+
+    pub fn map_to_iters(&self, obj: AutoLocal) -> Result<Option<(AutoLocal, AutoLocal)>> {
+        if self
+            .com
+            .env
+            .is_instance_of(obj.as_obj(), self.com.class_imapiterable)?
+        {
+            let key_iter = self.com.env.auto_local(
+                self.com
+                    .env
+                    .call_method_unchecked(
+                        obj.as_obj(),
+                        self.keyiterator_imapiterable,
+                        JavaType::Object(String::new()),
+                        &[obj.as_obj().into()],
+                    )?
+                    .l()?,
+            );
+
+            let val_iter = self.com.env.auto_local(
+                self.com
+                    .env
+                    .call_method_unchecked(
+                        obj.as_obj(),
+                        self.valiterator_imapiterable,
+                        JavaType::Object(String::new()),
+                        &[obj.as_obj().into()],
+                    )?
+                    .l()?,
+            );
+
+            Ok(Some((key_iter, val_iter)))
+        } else {
+            Ok(None)
+        }
     }
 }
