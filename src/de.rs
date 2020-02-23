@@ -371,6 +371,9 @@ impl<'de, 'a> SeqAccess<'de> for Seq<'de> {
     where
         T: DeserializeSeed<'de>,
     {
+        if is_null(self.seq.as_obj()) {
+            return Ok(None);
+        }
         let first = self.dec.com.env.auto_local(
             self.dec
                 .com
@@ -384,9 +387,6 @@ impl<'de, 'a> SeqAccess<'de> for Seq<'de> {
                 .l()?,
         );
 
-        if is_null(first.as_obj()) {
-            return Ok(None);
-        }
         self.seq = self.dec.com.env.auto_local(
             self.dec
                 .com
