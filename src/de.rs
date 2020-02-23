@@ -1,4 +1,7 @@
-use serde::de::{self, DeserializeSeed, EnumAccess, MapAccess, SeqAccess, VariantAccess, Visitor};
+use serde::de::{
+    self, DeserializeSeed, EnumAccess, IntoDeserializer, MapAccess, SeqAccess, VariantAccess,
+    Visitor,
+};
 use serde::Deserialize;
 
 use jni::objects::{AutoLocal, JObject};
@@ -30,6 +33,8 @@ fn is_null<'a>(obj: JObject<'a>) -> bool {
     obj.clone().into_inner() == JObject::null().into_inner()
 }
 
+// based on https://serde.rs/impl-deserializer.html
+
 impl<'de> de::Deserializer<'de> for Deserializer<'de> {
     type Error = Error;
 
@@ -37,49 +42,7 @@ impl<'de> de::Deserializer<'de> for Deserializer<'de> {
     where
         V: Visitor<'de>,
     {
-        unimplemented!()
-        // let com = &self.dec.com;
-        // if is_null(self.obj.as_obj()) {
-        //     self.deserialize_unit(visitor)
-        // } else if com
-        //     .env
-        //     .is_instance_of(self.obj.as_obj(), com.class_boolean)?
-        // {
-        //     self.deserialize_bool(visitor)
-        // } else if com
-        //     .env
-        //     .is_instance_of(self.obj.as_obj(), com.class_string)?
-        // {
-        //     self.deserialize_string(visitor)
-        // } else if com.env.is_instance_of(self.obj.as_obj(), com.class_long)? {
-        //     self.deserialize_i64(visitor)
-        // } else if com
-        //     .env
-        //     .is_instance_of(self.obj.as_obj(), com.class_integer)?
-        // {
-        //     self.deserialize_i32(visitor)
-        // } else if com.env.is_instance_of(self.obj.as_obj(), com.class_short)? {
-        //     self.deserialize_i16(visitor)
-        // } else if com.env.is_instance_of(self.obj.as_obj(), com.class_byte)? {
-        //     self.deserialize_i8(visitor)
-        // } else if com
-        //     .env
-        //     .is_instance_of(self.obj.as_obj(), com.class_string)?
-        // {
-        //     self.deserialize_string(visitor)
-        // } else if com
-        //     .env
-        //     .is_instance_of(self.obj.as_obj(), com.class_persistentvector)?
-        // {
-        //     self.deserialize_seq(visitor)
-        // } else if com
-        //     .env
-        //     .is_instance_of(self.obj.as_obj(), com.class_persistenthashmap)?
-        // {
-        //     self.deserialize_map(visitor)
-        // } else {
-        //     Err(Error::UnrecognizedType) // TODO: more helpful
-        // }
+        Err(Error::DeserializeAnyNotSupported)
     }
 
     fn deserialize_bool<V>(self, visitor: V) -> Result<V::Value>
@@ -363,7 +326,10 @@ impl<'de> de::Deserializer<'de> for Deserializer<'de> {
     where
         V: Visitor<'de>,
     {
-        if let Some((key_iter, val_iter)) = self.dec.map_to_iters(self.obj)? {
+        // test if it's a bare keyword (unit variant)
+        if let Some(s) = self.dec.decode_keyword(self.obj.as_obj())? {
+            visitor.visit_enum(s.into_deserializer())
+        } else if let Some((key_iter, val_iter)) = self.dec.map_to_iters(self.obj)? {
             visitor.visit_enum(Map {
                 dec: self.dec,
                 key_iter,
@@ -519,7 +485,6 @@ impl<'de> EnumAccess<'de> for Map<'de> {
     where
         V: DeserializeSeed<'de>,
     {
-        // TODO: single keywords for units
         if let Some(key) = MapAccess::next_key_seed(&mut self, seed)? {
             Ok((key, self))
         } else {
@@ -531,7 +496,8 @@ impl<'de> EnumAccess<'de> for Map<'de> {
 impl<'de> VariantAccess<'de> for Map<'de> {
     type Error = Error;
     fn unit_variant(self) -> Result<()> {
-        Ok(()) // TODO: change
+        // this shouldn't happen because we handled it in deserialize_enum
+        Err(Error::ExpectedKeyword)
     }
     fn newtype_variant_seed<T>(self, seed: T) -> Result<T::Value>
     where

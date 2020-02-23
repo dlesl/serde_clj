@@ -140,8 +140,8 @@ impl<'a> serde::Serializer for Serializer<'a> {
         _variant_index: u32,
         variant: &'static str,
     ) -> Result<JValue<'a>> {
-        Ok(variant_map(self.enc, variant, JObject::null())?.into()) // TODO: is
-                                                                    // this right?
+        // just a bare keyword
+        Ok(self.enc.get_keyword(variant)?.into())
     }
 
     #[inline]
