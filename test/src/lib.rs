@@ -1,6 +1,8 @@
 use jni::objects::{JClass, JObject};
-use jni::sys::{jint, jobject};
+use jni::sys::{jint, jobject, jstring};
 use jni::JNIEnv;
+use json_benchmark::{canada::Canada,twitter::Twitter};
+use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use serde_clj::{from_object, to_object, Decoder, Encoder};
 use std::collections::HashMap;
@@ -78,4 +80,45 @@ pub extern "system" fn Java_Test_roundtrip(env: JNIEnv, _: JClass, obj: JObject)
     let enc = Encoder::new(env).unwrap();
     let output = to_object(&enc, &out).expect("serialisation failed!");
     output.into_inner()
+}
+
+// Benchmarks
+
+lazy_static! {
+    static ref CANADA: Canada =
+        serde_json::from_slice(include_bytes!("../data/canada.json")).unwrap();
+    static ref TWITTER: Twitter =
+        serde_json::from_slice(include_bytes!("../data/twitter.json")).unwrap();
+}
+
+/// call this once first to prepare the lazy static
+#[no_mangle]
+pub extern "system" fn Java_Test_canadaSer(env: JNIEnv, _: JClass) -> jobject {
+    let enc = Encoder::new(env).unwrap();
+    let output = to_object(&enc, &CANADA as &Canada).expect("serialisation failed!");
+    output.into_inner()
+}
+
+#[no_mangle]
+pub extern "system" fn Java_Test_canadaSerJson(env: JNIEnv, _: JClass) -> jstring {
+    let output = serde_json::to_string(&CANADA as &Canada).expect("serialisation failed!");
+    env.new_string(output).unwrap().into_inner()
+}
+
+#[no_mangle]
+pub extern "system" fn Java_Test_canadaDe(env: JNIEnv, _: JClass, obj: JObject) {
+    let dec = Decoder::new(env).unwrap();
+    let _: Canada = from_object(&dec, obj).expect("deserialisation failed");
+}
+
+#[no_mangle]
+pub extern "system" fn Java_Test_twitterSer(env: JNIEnv, _: JClass) -> jobject {
+    let enc = Encoder::new(env).unwrap();
+    let output = to_object(&enc, &TWITTER as &Twitter).expect("serialisation failed!");
+    output.into_inner()}
+
+#[no_mangle]
+pub extern "system" fn Java_Test_twitterDe(env: JNIEnv, _: JClass, obj: JObject) {
+    let dec = Decoder::new(env).unwrap();
+    let _: Twitter = from_object(&dec, obj).expect("deserialisation failed");
 }
