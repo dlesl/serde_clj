@@ -184,8 +184,11 @@ impl<'de> de::Deserializer<'de> for Deserializer<'de> {
         V: Visitor<'de>,
     {
         if let Some(s) = self.dec.decode_string(self.obj.as_obj())? {
-            if s.len() == 1 {
-                return visitor.visit_char(s.chars().next().unwrap());
+            let mut chars = s.chars();
+            if let Some(c) = chars.next() {
+                if chars.next().is_none() {
+                    return visitor.visit_char(c);
+                }
             }
         }
         Err(Error::ExpectedChar)

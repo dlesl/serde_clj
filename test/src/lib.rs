@@ -20,6 +20,9 @@ struct Test {
     value: Vec<i64>,
     another_field: Option<String>,
     a_string: String,
+    // This gets encoded as a 1 char string, since java's char type
+    // does not support all utf8 characters 
+    a_char: char,
     tuple: (i32, String),
     opt_tuple: (i32, Option<String>),
     enumerate: Vec<Vars>,
@@ -36,6 +39,7 @@ pub extern "system" fn Java_Test_ser(env: JNIEnv, _: JClass, n: jint) -> jobject
         value: vec![1, 2, 3],
         another_field: None,
         a_string: "test".into(),
+        a_char: '𩸽',
         tuple: (4, "hey".into()),
         opt_tuple: (2, None),
         enumerate: vec![
