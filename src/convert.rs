@@ -6,21 +6,21 @@ use jni::{
     JNIEnv,
 };
 
-pub struct Common<'a> {
-    pub env: JNIEnv<'a>,
-    pub class_boolean: JClass<'a>,
-    pub class_byte: JClass<'a>,
-    pub class_integer: JClass<'a>,
-    pub class_short: JClass<'a>,
-    pub class_long: JClass<'a>,
-    pub class_float: JClass<'a>,
-    pub class_double: JClass<'a>,
-    pub class_character: JClass<'a>,
-    pub class_string: JClass<'a>,
-    pub class_persistentvector: JClass<'a>,
-    pub class_persistenthashmap: JClass<'a>,
-    pub class_imapiterable: JClass<'a>,
-    pub class_keyword: JClass<'a>,
+pub(crate) struct Common<'a> {
+    pub(crate) env: JNIEnv<'a>,
+    pub(crate) class_boolean: JClass<'a>,
+    pub(crate) class_byte: JClass<'a>,
+    pub(crate) class_integer: JClass<'a>,
+    pub(crate) class_short: JClass<'a>,
+    pub(crate) class_long: JClass<'a>,
+    pub(crate) class_float: JClass<'a>,
+    pub(crate) class_double: JClass<'a>,
+    pub(crate) class_character: JClass<'a>,
+    pub(crate) class_string: JClass<'a>,
+    pub(crate) class_persistentvector: JClass<'a>,
+    pub(crate) class_persistenthashmap: JClass<'a>,
+    pub(crate) class_imapiterable: JClass<'a>,
+    pub(crate) class_keyword: JClass<'a>,
 }
 
 impl<'a> Common<'a> {
@@ -45,7 +45,7 @@ impl<'a> Common<'a> {
 }
 
 pub struct Encoder<'a> {
-    pub com: Common<'a>,
+    pub(crate) com: Common<'a>,
     valueof_boolean: JStaticMethodID<'a>,
     valueof_byte: JStaticMethodID<'a>,
     valueof_integer: JStaticMethodID<'a>,
@@ -147,7 +147,7 @@ impl<'a> Encoder<'a> {
         })
     }
 
-    pub fn get_keyword(&'a self, name: &str) -> Result<JObject<'a>> {
+    pub(crate) fn get_keyword(&'a self, name: &str) -> Result<JObject<'a>> {
         let s = self
             .com
             .env
@@ -166,7 +166,7 @@ impl<'a> Encoder<'a> {
     }
 
     #[inline]
-    pub fn to_boxed(&self, val: JValue<'a>) -> Result<JObject<'a>> {
+    pub(crate) fn to_boxed(&self, val: JValue<'a>) -> Result<JObject<'a>> {
         let com = &self.com;
         let res = match val {
             JValue::Object(_) => val,
@@ -224,7 +224,7 @@ impl<'a> Encoder<'a> {
     }
 }
 
-pub struct ArrayList<'a> {
+pub(crate) struct ArrayList<'a> {
     enc: &'a Encoder<'a>,
     obj: AutoLocal<'a, 'a>,
 }
@@ -295,37 +295,34 @@ impl<'a> ArrayList<'a> {
 }
 
 pub struct Decoder<'a> {
-    pub com: Common<'a>,
-    pub value_boolean: JMethodID<'a>,
-    pub value_byte: JMethodID<'a>,
-    pub value_integer: JMethodID<'a>,
-    pub value_short: JMethodID<'a>,
-    pub value_long: JMethodID<'a>,
-    pub value_float: JMethodID<'a>,
-    pub value_double: JMethodID<'a>,
-    pub value_character: JMethodID<'a>,
+    pub(crate) com: Common<'a>,
+    pub(crate) value_boolean: JMethodID<'a>,
+    pub(crate) value_byte: JMethodID<'a>,
+    pub(crate) value_integer: JMethodID<'a>,
+    pub(crate) value_short: JMethodID<'a>,
+    pub(crate) value_long: JMethodID<'a>,
+    pub(crate) value_float: JMethodID<'a>,
+    pub(crate) value_double: JMethodID<'a>,
 
-    pub class_rt: JClass<'a>,
-    pub first_seq: JStaticMethodID<'a>,
-    pub next_seq: JStaticMethodID<'a>,
+    pub(crate) class_rt: JClass<'a>,
+    pub(crate) first_seq: JStaticMethodID<'a>,
+    pub(crate) next_seq: JStaticMethodID<'a>,
 
-    pub iterator_persistentvector: JMethodID<'a>,
-    pub keyiterator_imapiterable: JMethodID<'a>,
-    pub valiterator_imapiterable: JMethodID<'a>,
+    pub(crate) keyiterator_imapiterable: JMethodID<'a>,
+    pub(crate) valiterator_imapiterable: JMethodID<'a>,
 
-    pub getname_keyword: JMethodID<'a>,
+    pub(crate) getname_keyword: JMethodID<'a>,
 
-    pub class_iter: JClass<'a>,
-    pub hasnext_iter: JMethodID<'a>,
-    pub next_iter: JMethodID<'a>,
+    pub(crate) hasnext_iter: JMethodID<'a>,
+    pub(crate) next_iter: JMethodID<'a>,
 
     /// a byte array
-    pub class_bytes: JClass<'a>,
+    pub(crate) class_bytes: JClass<'a>,
 }
 
 macro_rules! decode {
     ($func:ident, $out:ident, $class:ident, $value_method:ident, $prim:ident, $code:ident) => {
-        pub fn $func(&self, obj: JObject) -> Result<Option<$out>> {
+        pub(crate) fn $func(&self, obj: JObject) -> Result<Option<$out>> {
             if self
                 .com
                 .env
@@ -343,19 +340,19 @@ macro_rules! decode {
 
 impl<'a> Decoder<'a> {
     pub fn new(env: JNIEnv<'a>) -> Result<Self> {
-        let com = Common::new(env)?;
-        let class_rt = com.env.find_class("clojure/lang/RT")?;
-        // let class_iseq = com.env.find_class("clojure/lang/ISeq")?;
-        let class_iter = com.env.find_class("java/util/Iterator")?;
+        let com = Common::new(env.clone())?;
+        let class_rt = env.find_class("clojure/lang/RT")?;
+        let class_iter = env.find_class("java/util/Iterator")?;
+        let hasnext_iter = env.get_method_id(class_iter, "hasNext", "()Z")?;
+        let next_iter = com
+                .env
+                .get_method_id(class_iter, "next", "()Ljava/lang/Object;")?;
 
         Ok(Decoder {
             value_boolean: com
                 .env
                 .get_method_id(com.class_boolean, "booleanValue", "()Z")?,
-            value_byte: com.env.get_method_id(com.class_byte, "byteValue", "()B")?,
-            value_character: com
-                .env
-                .get_method_id(com.class_character, "charValue", "()C")?,
+            value_byte: env.get_method_id(com.class_byte, "byteValue", "()B")?,
             value_float: com
                 .env
                 .get_method_id(com.class_float, "floatValue", "()F")?,
@@ -368,49 +365,41 @@ impl<'a> Decoder<'a> {
             value_integer: com
                 .env
                 .get_method_id(com.class_integer, "intValue", "()I")?,
-            value_long: com.env.get_method_id(com.class_long, "longValue", "()J")?,
-            // seq_rt: com.env.get_static_method_id(class_rt, "seq", "(Ljava/lang/Object;)Lclojure/lang/ISeq;")?,
-            first_seq: com.env.get_static_method_id(
+            value_long: env.get_method_id(com.class_long, "longValue", "()J")?,
+            // seq_rt: env.get_static_method_id(class_rt, "seq", "(Ljava/lang/Object;)Lclojure/lang/ISeq;")?,
+            first_seq: env.get_static_method_id(
                 class_rt,
                 "first",
                 "(Ljava/lang/Object;)Ljava/lang/Object;",
             )?,
-            next_seq: com.env.get_static_method_id(
+            next_seq: env.get_static_method_id(
                 class_rt,
                 "next",
                 "(Ljava/lang/Object;)Lclojure/lang/ISeq;",
             )?,
-            iterator_persistentvector: com.env.get_method_id(
-                com.class_persistentvector,
-                "iterator",
-                "()Ljava/util/Iterator;",
-            )?,
 
-            keyiterator_imapiterable: com.env.get_method_id(
+            keyiterator_imapiterable: env.get_method_id(
                 com.class_imapiterable,
                 "keyIterator",
                 "()Ljava/util/Iterator;",
             )?,
 
-            valiterator_imapiterable: com.env.get_method_id(
+            valiterator_imapiterable: env.get_method_id(
                 com.class_imapiterable,
                 "valIterator",
                 "()Ljava/util/Iterator;",
             )?,
 
-            getname_keyword: com.env.get_method_id(
+            getname_keyword: env.get_method_id(
                 com.class_keyword,
                 "getName",
                 "()Ljava/lang/String;",
             )?,
 
-            hasnext_iter: com.env.get_method_id(class_iter, "hasNext", "()Z")?,
-            next_iter: com
-                .env
-                .get_method_id(class_iter, "next", "()Ljava/lang/Object;")?,
+            hasnext_iter,
+            next_iter,
 
-            class_bytes: com.env.find_class("[B")?,
-            class_iter,
+            class_bytes: env.find_class("[B")?,
             class_rt,
             // class_iseq,
             com,
@@ -437,7 +426,7 @@ impl<'a> Decoder<'a> {
     decode!(decode_bool, bool, class_boolean, value_boolean, Boolean, z);
     decode!(decode_i8, i8, class_byte, value_byte, Byte, b);
 
-    pub fn decode_string(&self, obj: JObject) -> Result<Option<String>> {
+    pub(crate) fn decode_string(&self, obj: JObject) -> Result<Option<String>> {
         if self.com.env.is_instance_of(obj, self.com.class_string)? {
             Ok(Some(self.com.env.get_string(obj.into())?.into()))
         } else {
@@ -445,7 +434,7 @@ impl<'a> Decoder<'a> {
         }
     }
 
-    pub fn decode_bytes(&self, obj: JObject) -> Result<Option<Vec<u8>>> {
+    pub(crate) fn decode_bytes(&self, obj: JObject) -> Result<Option<Vec<u8>>> {
         if self.com.env.is_instance_of(obj, self.class_bytes)? {
             Ok(Some(self.com.env.convert_byte_array(obj.into_inner())?))
         } else {
@@ -453,7 +442,7 @@ impl<'a> Decoder<'a> {
         }
     }
 
-    pub fn decode_keyword(&self, obj: JObject) -> Result<Option<String>> {
+    pub(crate) fn decode_keyword(&self, obj: JObject) -> Result<Option<String>> {
         if self.com.env.is_instance_of(obj, self.com.class_keyword)? {
             let name = self.com.env.auto_local(
                 self.com
@@ -473,7 +462,7 @@ impl<'a> Decoder<'a> {
         }
     }
 
-    pub fn map_to_iters(&self, obj: AutoLocal) -> Result<Option<(AutoLocal, AutoLocal)>> {
+    pub(crate) fn map_to_iters(&self, obj: AutoLocal) -> Result<Option<(AutoLocal, AutoLocal)>> {
         if self
             .com
             .env

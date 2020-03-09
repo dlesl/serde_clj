@@ -9,7 +9,7 @@ See [test/src/lib.rs](test/src/lib.rs) for a usage example.
 
 ```rust
 #[derive(Serialize)]
-struct {
+struct MyStruct {
     number: i32,
     names: Vec<String>
 }
@@ -24,11 +24,9 @@ becomes
 
 * Unsigned integers serialize to the 'next biggest' type (except u64,
   which becomes i64), since Java doesn't really support unsigned.
-  Maybe there's a better solution.
-* Accordingly, if you want to serialize a `Vec<u8>` representing
-  binary data, you should annotate or wrap these fields with
-  [serde_bytes](https://crates.io/crates/serde_bytes), or you will end
-  up with a vector of `java.lang.Short`, which probably isn't very
-  efficient.
-* Check that struct field names are keywords when deserializing.
+* TODO: convert to/from BigInt where necessary.
+* If you want to serialize a `Vec<u8>`, you should annotate or wrap
+  the field with [serde_bytes](https://crates.io/crates/serde_bytes),
+  or you will end up with a vector of `java.lang.Short`, which might
+  not be what you wanted and isn't very efficient.
 * More extensive tests.
