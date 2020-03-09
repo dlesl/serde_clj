@@ -37,30 +37,26 @@ impl de::Error for Error {
 
 impl Display for Error {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str(std::error::Error::description(self))
-    }
-}
-
-impl std::error::Error for Error {
-    fn description(&self) -> &str {
         match *self {
-            Error::Message(ref msg) => msg,
-            Error::JNI(ref error) => error.description(),
-            Error::DeserializeAnyNotSupported => "deserialize_any not supported!",
-            Error::ExpectedBytes => "ExpectedBytes",
-            Error::ExpectedBoolean => "ExpectedBoolean",
-            Error::ExpectedInteger => "ExpectedInteger",
-            Error::ExpectedFloat => "ExpectedFloat",
-            Error::ExpectedChar => "ExpectedChar",
-            Error::ExpectedString => "ExpectedString",
-            Error::ExpectedKeyword => "ExpectedKeyword",
-            Error::ExpectedNull => "ExpectedNull",
-            Error::ExpectedArray => "ExpectedArray",
-            Error::ExpectedMap => "ExpectedMap",
-            Error::ExpectedEnum => "ExpectedEnum",
+            Error::Message(ref msg) => formatter.write_str(msg),
+            Error::JNI(ref error) => write!(formatter, "JNI error: {}", error),
+            Error::DeserializeAnyNotSupported => formatter.write_str("deserialize_any not supported!"),
+            Error::ExpectedBytes => formatter.write_str("ExpectedBytes"),
+            Error::ExpectedBoolean => formatter.write_str("ExpectedBoolean"),
+            Error::ExpectedInteger => formatter.write_str("ExpectedInteger"),
+            Error::ExpectedFloat => formatter.write_str("ExpectedFloat"),
+            Error::ExpectedChar => formatter.write_str("ExpectedChar"),
+            Error::ExpectedString => formatter.write_str("ExpectedString"),
+            Error::ExpectedKeyword => formatter.write_str("ExpectedKeyword"),
+            Error::ExpectedNull => formatter.write_str("ExpectedNull"),
+            Error::ExpectedArray => formatter.write_str("ExpectedArray"),
+            Error::ExpectedMap => formatter.write_str("ExpectedMap"),
+            Error::ExpectedEnum => formatter.write_str("ExpectedEnum"),
         }
     }
 }
+
+impl std::error::Error for Error {}
 
 impl From<jni::errors::Error> for Error {
     fn from(error: jni::errors::Error) -> Self {
