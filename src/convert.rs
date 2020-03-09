@@ -165,6 +165,7 @@ impl<'a> Encoder<'a> {
         Ok(k)
     }
 
+    #[inline]
     pub fn to_boxed(&self, val: JValue<'a>) -> Result<JObject<'a>> {
         let com = &self.com;
         let res = match val {

@@ -1,5 +1,4 @@
-use jni::objects::{JObject, JValue};
-use jni::sys::jboolean;
+use jni::objects::JObject;
 use serde::{self, ser, Serialize};
 
 use crate::convert::{ArrayList, Encoder};
@@ -13,7 +12,7 @@ impl<'a> Serializer<'a> {}
 
 // based on https://github.com/serde-rs/json/blob/master/src/value/ser.rs
 
-pub fn to_value<'a, T>(enc: &'a Encoder<'a>, value: &T) -> Result<JValue<'a>>
+pub fn to_object<'a, T>(enc: &'a Encoder<'a>, value: &T) -> Result<JObject<'a>>
 where
     T: Serialize,
 {
@@ -21,11 +20,16 @@ where
     value.serialize(serializer)
 }
 
-pub fn to_object<'a, T>(enc: &'a Encoder<'a>, value: &T) -> Result<JObject<'a>>
-where
-    T: Serialize,
-{
-    to_value(enc.clone(), value).and_then(|v| enc.to_boxed(v))
+macro_rules! boxer {
+    ($func:ident, $type:ty) => {
+        boxer!($func, $type as $type);
+    };
+    ($func:ident, $type:ty as $as:ty) => {
+        #[inline]
+        fn $func(self, val: $type) -> Result<JObject<'a>> {
+            self.enc.to_boxed((val as $as).into())
+        }
+    }
 }
 
 pub fn variant_map<'a>(
@@ -40,7 +44,7 @@ pub fn variant_map<'a>(
 }
 
 impl<'a> serde::Serializer for Serializer<'a> {
-    type Ok = JValue<'a>;
+    type Ok = JObject<'a>;
     type Error = Error;
 
     type SerializeSeq = SerializeVec<'a>;
@@ -51,63 +55,23 @@ impl<'a> serde::Serializer for Serializer<'a> {
     type SerializeStruct = SerializeVec<'a>;
     type SerializeStructVariant = SerializeStructVariant<'a>;
 
-    #[inline]
-    fn serialize_bool(self, value: bool) -> Result<JValue<'a>> {
-        Ok(JValue::Bool(value as jboolean))
-    }
+    boxer!(serialize_bool, bool);
+
+    boxer!(serialize_i8, i8);
+    boxer!(serialize_i16, i16);
+    boxer!(serialize_i32, i32);
+    boxer!(serialize_i64, i64);
+
+    boxer!(serialize_u8, u8 as i16);
+    boxer!(serialize_u16, u16 as i32);
+    boxer!(serialize_u32, u32 as i64);
+    boxer!(serialize_u64, u64 as i64); // TODO: BigInt here
+    
+    boxer!(serialize_f32, f32);
+    boxer!(serialize_f64, f64);
 
     #[inline]
-    fn serialize_i8(self, value: i8) -> Result<JValue<'a>> {
-        Ok(JValue::Byte(value))
-    }
-
-    #[inline]
-    fn serialize_i16(self, value: i16) -> Result<JValue<'a>> {
-        Ok(JValue::Short(value))
-    }
-
-    #[inline]
-    fn serialize_i32(self, value: i32) -> Result<JValue<'a>> {
-        Ok(JValue::Int(value))
-    }
-
-    fn serialize_i64(self, value: i64) -> Result<JValue<'a>> {
-        Ok(JValue::Long(value))
-    }
-
-    #[inline]
-    fn serialize_u8(self, value: u8) -> Result<JValue<'a>> {
-        Ok(JValue::Short(value as i16))
-    }
-
-    #[inline]
-    fn serialize_u16(self, value: u16) -> Result<JValue<'a>> {
-        Ok(JValue::Int(value as i32))
-    }
-
-    #[inline]
-    fn serialize_u32(self, value: u32) -> Result<JValue<'a>> {
-        Ok(JValue::Long(value as i64))
-    }
-
-    #[inline]
-    fn serialize_u64(self, value: u64) -> Result<JValue<'a>> {
-        Ok(JValue::Long(value as i64)) // FIXME: is this OK? Java
-                                       // doesn't have unsigned types but does let you treat them as unsigned...
-    }
-
-    #[inline]
-    fn serialize_f32(self, value: f32) -> Result<JValue<'a>> {
-        Ok(JValue::Float(value))
-    }
-
-    #[inline]
-    fn serialize_f64(self, value: f64) -> Result<JValue<'a>> {
-        Ok(JValue::Double(value))
-    }
-
-    #[inline]
-    fn serialize_char(self, value: char) -> Result<JValue<'a>> {
+    fn serialize_char(self, value: char) -> Result<JObject<'a>> {
         // Rust's chars can be 32 bit so we need to encode as string
         let mut s = String::new();
         s.push(value);
@@ -115,21 +79,21 @@ impl<'a> serde::Serializer for Serializer<'a> {
     }
 
     #[inline]
-    fn serialize_str(self, value: &str) -> Result<JValue<'a>> {
-        Ok(JValue::Object(self.enc.com.env.new_string(value)?.into()).into())
+    fn serialize_str(self, value: &str) -> Result<JObject<'a>> {
+        Ok(self.enc.com.env.new_string(value)?.into())
     }
 
-    fn serialize_bytes(self, value: &[u8]) -> Result<JValue<'a>> {
-        Ok(JObject::from(self.enc.com.env.byte_array_from_slice(value)?).into())
-    }
-
-    #[inline]
-    fn serialize_unit(self) -> Result<JValue<'a>> {
-        Ok(JValue::Object(JObject::null()))
+    fn serialize_bytes(self, value: &[u8]) -> Result<JObject<'a>> {
+        Ok(self.enc.com.env.byte_array_from_slice(value)?.into())
     }
 
     #[inline]
-    fn serialize_unit_struct(self, _name: &'static str) -> Result<JValue<'a>> {
+    fn serialize_unit(self) -> Result<JObject<'a>> {
+        Ok(JObject::null())
+    }
+
+    #[inline]
+    fn serialize_unit_struct(self, _name: &'static str) -> Result<JObject<'a>> {
         self.serialize_unit()
     }
 
@@ -139,9 +103,9 @@ impl<'a> serde::Serializer for Serializer<'a> {
         _name: &'static str,
         _variant_index: u32,
         variant: &'static str,
-    ) -> Result<JValue<'a>> {
+    ) -> Result<JObject<'a>> {
         // just a bare keyword
-        Ok(self.enc.get_keyword(variant)?.into())
+        self.enc.get_keyword(variant)
     }
 
     #[inline]
@@ -149,7 +113,7 @@ impl<'a> serde::Serializer for Serializer<'a> {
         self,
         _name: &'static str,
         value: &T,
-    ) -> Result<JValue<'a>>
+    ) -> Result<JObject<'a>>
     where
         T: Serialize,
     {
@@ -162,20 +126,20 @@ impl<'a> serde::Serializer for Serializer<'a> {
         _variant_index: u32,
         variant: &'static str,
         value: &T,
-    ) -> Result<JValue<'a>>
+    ) -> Result<JObject<'a>>
     where
         T: Serialize,
     {
-        Ok(variant_map(self.enc, variant, to_object(self.enc, &value)?)?.into())
+        variant_map(self.enc, variant, to_object(self.enc, &value)?)
     }
 
     #[inline]
-    fn serialize_none(self) -> Result<JValue<'a>> {
+    fn serialize_none(self) -> Result<JObject<'a>> {
         self.serialize_unit()
     }
 
     #[inline]
-    fn serialize_some<T: ?Sized>(self, value: &T) -> Result<JValue<'a>>
+    fn serialize_some<T: ?Sized>(self, value: &T) -> Result<JObject<'a>>
     where
         T: Serialize,
     {
@@ -259,7 +223,7 @@ pub struct SerializeStructVariant<'a> {
 }
 
 impl<'a> ser::SerializeSeq for SerializeVec<'a> {
-    type Ok = JValue<'a>;
+    type Ok = JObject<'a>;
     type Error = Error;
 
     fn serialize_element<T: ?Sized>(&mut self, value: &T) -> Result<()>
@@ -270,13 +234,13 @@ impl<'a> ser::SerializeSeq for SerializeVec<'a> {
         self.vec.add(val)
     }
 
-    fn end(self) -> Result<JValue<'a>> {
-        Ok(self.vec.to_vector()?.into())
+    fn end(self) -> Result<JObject<'a>> {
+        self.vec.to_vector()
     }
 }
 
 impl<'a> ser::SerializeTuple for SerializeVec<'a> {
-    type Ok = JValue<'a>;
+    type Ok = JObject<'a>;
     type Error = Error;
 
     fn serialize_element<T: ?Sized>(&mut self, value: &T) -> Result<()>
@@ -286,13 +250,13 @@ impl<'a> ser::SerializeTuple for SerializeVec<'a> {
         ser::SerializeSeq::serialize_element(self, value)
     }
 
-    fn end(self) -> Result<JValue<'a>> {
+    fn end(self) -> Result<JObject<'a>> {
         ser::SerializeSeq::end(self)
     }
 }
 
 impl<'a> ser::SerializeTupleStruct for SerializeVec<'a> {
-    type Ok = JValue<'a>;
+    type Ok = JObject<'a>;
     type Error = Error;
 
     fn serialize_field<T: ?Sized>(&mut self, value: &T) -> Result<()>
@@ -302,13 +266,13 @@ impl<'a> ser::SerializeTupleStruct for SerializeVec<'a> {
         ser::SerializeSeq::serialize_element(self, value)
     }
 
-    fn end(self) -> Result<JValue<'a>> {
+    fn end(self) -> Result<JObject<'a>> {
         ser::SerializeSeq::end(self)
     }
 }
 
 impl<'a> ser::SerializeTupleVariant for SerializeTupleVariant<'a> {
-    type Ok = JValue<'a>;
+    type Ok = JObject<'a>;
     type Error = Error;
 
     fn serialize_field<T: ?Sized>(&mut self, value: &T) -> Result<()>
@@ -319,13 +283,13 @@ impl<'a> ser::SerializeTupleVariant for SerializeTupleVariant<'a> {
         Ok(())
     }
 
-    fn end(self) -> Result<JValue<'a>> {
-        Ok(variant_map(self.enc, &self.name, self.vec.to_vector()?)?.into())
+    fn end(self) -> Result<JObject<'a>> {
+        variant_map(self.enc, &self.name, self.vec.to_vector()?)
     }
 }
 
 impl<'a> ser::SerializeMap for SerializeVec<'a> {
-    type Ok = JValue<'a>;
+    type Ok = JObject<'a>;
     type Error = Error;
 
     fn serialize_key<T: ?Sized>(&mut self, key: &T) -> Result<()>
@@ -342,13 +306,13 @@ impl<'a> ser::SerializeMap for SerializeVec<'a> {
         ser::SerializeSeq::serialize_element(self, &value)
     }
 
-    fn end(self) -> Result<JValue<'a>> {
-        Ok(self.vec.to_hashmap()?.into())
+    fn end(self) -> Result<JObject<'a>> {
+        self.vec.to_hashmap()
     }
 }
 
 impl<'a> ser::SerializeStruct for SerializeVec<'a> {
-    type Ok = JValue<'a>;
+    type Ok = JObject<'a>;
     type Error = Error;
 
     fn serialize_field<T: ?Sized>(&mut self, key: &'static str, value: &T) -> Result<()>
@@ -359,13 +323,13 @@ impl<'a> ser::SerializeStruct for SerializeVec<'a> {
         ser::SerializeMap::serialize_value(self, value)
     }
 
-    fn end(self) -> Result<JValue<'a>> {
+    fn end(self) -> Result<JObject<'a>> {
         ser::SerializeMap::end(self)
     }
 }
 
 impl<'a> ser::SerializeStructVariant for SerializeStructVariant<'a> {
-    type Ok = JValue<'a>;
+    type Ok = JObject<'a>;
     type Error = Error;
 
     fn serialize_field<T: ?Sized>(&mut self, key: &'static str, value: &T) -> Result<()>
@@ -375,7 +339,7 @@ impl<'a> ser::SerializeStructVariant for SerializeStructVariant<'a> {
         ser::SerializeStruct::serialize_field(&mut self.map, key, value)
     }
 
-    fn end(self) -> Result<JValue<'a>> {
-        Ok(variant_map(self.enc, &self.name, self.map.vec.to_hashmap()?)?.into())
+    fn end(self) -> Result<JObject<'a>> {
+        variant_map(self.enc, &self.name, self.map.vec.to_hashmap()?)
     }
 }
