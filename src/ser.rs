@@ -66,7 +66,7 @@ impl<'a> serde::Serializer for Serializer<'a> {
     boxer!(serialize_u16, u16 as i32);
     boxer!(serialize_u32, u32 as i64);
     boxer!(serialize_u64, u64 as i64); // TODO: BigInt here
-    
+
     boxer!(serialize_f32, f32);
     boxer!(serialize_f64, f64);
 

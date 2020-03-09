@@ -1,14 +1,14 @@
 //! # serde_clj
-//! 
+//!
 //! Convert Rust data structures to/from (relatively) idiomatic
 //! Clojure data in memory using JNI.
-//! 
+//!
 //! See
 //! [test/src/lib.rs](https://github.com/dlesl/serde_clj/blob/master/test/src/lib.rs)
 //! for a usage example.
-//! 
+//!
 //! ## Example
-//! 
+//!
 //! ```rust
 //! #[derive(Serialize)]
 //! struct MyStruct {
@@ -20,7 +20,6 @@
 //! ```clojure
 //! {:number 3
 //!  :names ["foo" "bar"]}
-
 
 mod convert;
 mod de;

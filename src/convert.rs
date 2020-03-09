@@ -148,10 +148,7 @@ impl<'a> Encoder<'a> {
     }
 
     pub(crate) fn get_keyword(&'a self, name: &str) -> Result<JObject<'a>> {
-        let s = self
-            .com
-            .env
-            .auto_local(self.com.env.new_string(name)?);
+        let s = self.com.env.auto_local(self.com.env.new_string(name)?);
         let k = self
             .com
             .env
@@ -345,8 +342,8 @@ impl<'a> Decoder<'a> {
         let class_iter = env.find_class("java/util/Iterator")?;
         let hasnext_iter = env.get_method_id(class_iter, "hasNext", "()Z")?;
         let next_iter = com
-                .env
-                .get_method_id(class_iter, "next", "()Ljava/lang/Object;")?;
+            .env
+            .get_method_id(class_iter, "next", "()Ljava/lang/Object;")?;
 
         Ok(Decoder {
             value_boolean: com
@@ -462,7 +459,10 @@ impl<'a> Decoder<'a> {
         }
     }
 
-    pub(crate) fn map_to_iters(&self, obj: AutoLocal<'a, 'a>) -> Result<Option<(AutoLocal, AutoLocal)>> {
+    pub(crate) fn map_to_iters(
+        &self,
+        obj: AutoLocal<'a, 'a>,
+    ) -> Result<Option<(AutoLocal, AutoLocal)>> {
         if self
             .com
             .env

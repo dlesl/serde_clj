@@ -40,7 +40,9 @@ impl Display for Error {
         match *self {
             Error::Message(ref msg) => formatter.write_str(msg),
             Error::JNI(ref error) => write!(formatter, "JNI error: {}", error),
-            Error::DeserializeAnyNotSupported => formatter.write_str("deserialize_any not supported!"),
+            Error::DeserializeAnyNotSupported => {
+                formatter.write_str("deserialize_any not supported!")
+            }
             Error::ExpectedBytes => formatter.write_str("ExpectedBytes"),
             Error::ExpectedBoolean => formatter.write_str("ExpectedBoolean"),
             Error::ExpectedInteger => formatter.write_str("ExpectedInteger"),
