@@ -151,7 +151,7 @@ impl<'a> Encoder<'a> {
         let s = self
             .com
             .env
-            .auto_local(self.com.env.new_string(name)?.into());
+            .auto_local(self.com.env.new_string(name)?);
         let k = self
             .com
             .env
@@ -462,7 +462,7 @@ impl<'a> Decoder<'a> {
         }
     }
 
-    pub(crate) fn map_to_iters(&self, obj: AutoLocal) -> Result<Option<(AutoLocal, AutoLocal)>> {
+    pub(crate) fn map_to_iters(&self, obj: AutoLocal<'a, 'a>) -> Result<Option<(AutoLocal, AutoLocal)>> {
         if self
             .com
             .env

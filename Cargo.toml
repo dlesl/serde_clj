@@ -11,7 +11,7 @@ exclude = ["test/*"]
 
 [dependencies]
 serde = "1.0"
-jni = "0.14.0"
+jni = "0.15.0"
 
 [dev-dependencies]
 serde = { version = "1.0", features = ["derive"] }
